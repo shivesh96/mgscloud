@@ -88,6 +88,22 @@ class NativeService {
     } catch (_) {}
   }
 
+  Future<String> getDeviceManufacturer() async {
+    try {
+      final String? manufacturer =
+          await _channel.invokeMethod('getDeviceManufacturer');
+      return manufacturer ?? 'generic';
+    } catch (_) {
+      return 'generic';
+    }
+  }
+
+  Future<void> openAutoStartSettings() async {
+    try {
+      await _channel.invokeMethod('openAutoStartSettings');
+    } catch (_) {}
+  }
+
   Future<List<Map<String, dynamic>>> pollPendingEvents() async {
     try {
       final result = await _channel.invokeListMethod('pollPendingEvents');

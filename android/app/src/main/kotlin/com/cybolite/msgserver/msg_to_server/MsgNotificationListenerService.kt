@@ -1,10 +1,13 @@
 package com.cybolite.msgserver.msg_to_server
 
 import android.app.Notification
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.annotation.Keep
 import java.util.UUID
 
+@Keep
 class MsgNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -42,14 +45,28 @@ class MsgNotificationListenerService : NotificationListenerService() {
             } ?: false
 
             if (message.isNullOrBlank() || isHiddenPlaceholder) {
-                val messagesArray = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
-                if (messagesArray != null && messagesArray.isNotEmpty()) {
-                    for (i in messagesArray.indices.reversed()) {
-                        val msgBundle = messagesArray[i] as? android.os.Bundle
-                        val text = msgBundle?.getCharSequence("text")?.toString()?.trim()
-                        if (!text.isNullOrBlank()) {
-                            message = text
-                            break
+                try {
+                    val messagingStyle = androidx.core.app.NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(notification)
+                    if (messagingStyle != null && messagingStyle.messages.isNotEmpty()) {
+                        val lastMsg = messagingStyle.messages.lastOrNull { !it.text.isNullOrBlank() }
+                        if (lastMsg != null) {
+                            message = lastMsg.text?.toString()?.trim()
+                        }
+                    }
+                } catch (_: Exception) {}
+
+                if (message.isNullOrBlank() || isHiddenPlaceholder) {
+                    val messagesArray = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+                    if (messagesArray != null && messagesArray.isNotEmpty()) {
+                        for (i in messagesArray.indices.reversed()) {
+                            val item = messagesArray[i]
+                            if (item is android.os.Bundle) {
+                                val text = item.getCharSequence("text")?.toString()?.trim()
+                                if (!text.isNullOrBlank()) {
+                                    message = text
+                                    break
+                                }
+                            }
                         }
                     }
                 }

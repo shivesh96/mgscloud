@@ -73,16 +73,30 @@ class _SimConfigScreenState extends State<SimConfigScreen> {
 
   void _initControllers(List<SimInfoModel> list) {
     for (final sim in list) {
-      _nameControllers[sim.subscriptionId] ??= TextEditingController(
-        text: sim.customName.isNotEmpty ? sim.customName : sim.defaultName,
-      );
-      _numberControllers[sim.subscriptionId] ??= TextEditingController(
-        text: sim.userPhoneNumber.isNotEmpty
-            ? sim.userPhoneNumber
-            : sim.detectedNumber,
-      );
-      _enabledStates[sim.subscriptionId] ??= sim.enabled;
-      _numberSources[sim.subscriptionId] ??= sim.numberSource;
+      final nameText =
+          sim.customName.isNotEmpty ? sim.customName : sim.defaultName;
+      final numberText = sim.userPhoneNumber.isNotEmpty
+          ? sim.userPhoneNumber
+          : sim.detectedNumber;
+
+      if (_nameControllers.containsKey(sim.subscriptionId)) {
+        _nameControllers[sim.subscriptionId]!.text = nameText;
+      } else {
+        _nameControllers[sim.subscriptionId] =
+            TextEditingController(text: nameText);
+      }
+
+      if (_numberControllers.containsKey(sim.subscriptionId)) {
+        _numberControllers[sim.subscriptionId]!.text = numberText;
+      } else {
+        _numberControllers[sim.subscriptionId] =
+            TextEditingController(text: numberText);
+      }
+
+      _enabledStates[sim.subscriptionId] = sim.enabled;
+      _numberSources[sim.subscriptionId] = (list.length <= 1)
+          ? 'auto_detect'
+          : sim.numberSource;
     }
   }
 
@@ -91,7 +105,8 @@ class _SimConfigScreenState extends State<SimConfigScreen> {
     final name = _nameControllers[subId]?.text.trim() ?? '';
     final number = _numberControllers[subId]?.text.trim() ?? '';
     final enabled = _enabledStates[subId] ?? true;
-    final numberSource = _numberSources[subId] ?? 'default';
+    final numberSource = _numberSources[subId] ??
+        (_sims.length <= 1 ? 'auto_detect' : 'default');
 
     await _simService.updateSimConfig(
       subscriptionId: subId,
@@ -373,22 +388,35 @@ class _SimConfigScreenState extends State<SimConfigScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: numberSource,
-              decoration: const InputDecoration(
-                labelText: 'Receiving number source',
-                border: OutlineInputBorder(),
-              ),
-              items: simNumberSourceOptions(sim.slotIndex)
-                  .map(
-                    (option) => DropdownMenuItem(
-                      value: option.$1,
-                      child: Text(option.$2),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _numberSources[subId] = value ?? 'default'),
+            Builder(
+              builder: (context) {
+                final options = simNumberSourceOptions(sim.slotIndex, totalSims: _sims.length);
+                final rawSource = _numberSources[subId] ??
+                    (_sims.length <= 1 ? 'auto_detect' : numberSource);
+                final selectedSource = options.any((opt) => opt.$1 == rawSource)
+                    ? rawSource
+                    : options.first.$1;
+
+                return DropdownButtonFormField<String>(
+                  key: ValueKey('sim_source_${subId}_$selectedSource'),
+                  initialValue: selectedSource,
+                  decoration: const InputDecoration(
+                    labelText: 'Receiving number source',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: options
+                      .map(
+                        (option) => DropdownMenuItem(
+                          value: option.$1,
+                          child: Text(option.$2),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(
+                    () => _numberSources[subId] = value ?? selectedSource,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             TextField(
@@ -431,10 +459,16 @@ class _SimConfigScreenState extends State<SimConfigScreen> {
 
 /// Slot-specific labels prevent the two SIM pickers from ever presenting the
 /// other slot as an auto-detect option.
-List<(String, String)> simNumberSourceOptions(int slotIndex) => [
-  ('default', 'Default SIM'),
-  (
-    'auto_detect',
-    'SIM ${slotIndex + 1} (${slotIndex == 0 ? 'Auto detect' : 'Auto Detect'})',
-  ),
-];
+/// When only 1 SIM is installed, returns only 1 option (Auto Detect).
+/// When multiple SIMs are installed, returns multiple options (Default SIM and Auto Detect).
+List<(String, String)> simNumberSourceOptions(int slotIndex, {int totalSims = 1}) {
+  if (totalSims <= 1) {
+    return [
+      ('auto_detect', 'SIM ${slotIndex + 1} (Auto Detect)'),
+    ];
+  }
+  return [
+    ('default', 'Default SIM'),
+    ('auto_detect', 'SIM ${slotIndex + 1} (Auto Detect)'),
+  ];
+}

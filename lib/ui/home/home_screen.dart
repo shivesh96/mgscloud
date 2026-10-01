@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   StreamSubscription<EventModel>? _eventSub;
   StreamSubscription<UserModel>? _permSub;
-  bool _sendFilteredOnly = true;
+  bool _sendFilteredOnly = false;
   bool _checkingPermissions = true;
   bool _mandatoryPermissionsGranted = false;
 
@@ -162,10 +162,11 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
 
+    final serverUrl = settings['server_url'] as String? ?? '';
     if (_mandatoryPermissionsGranted &&
         isEnabled &&
-        !user.isGuest &&
-        user.authToken.isNotEmpty &&
+        ((!user.isGuest && user.authToken.isNotEmpty) ||
+            serverUrl.trim().isNotEmpty) &&
         !user.isBlocked) {
       BackgroundServiceManager.instance.startService();
     }
@@ -338,7 +339,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: source,
+                  initialValue: source,
                   decoration: const InputDecoration(labelText: 'Source'),
                   items: const [
                     DropdownMenuItem(value: 'sms', child: Text('SMS Message')),
@@ -446,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     if (_checkingPermissions || !_mandatoryPermissionsGranted) {
       return Scaffold(
-        appBar: AppBar(title: const Text('MSG to Server')),
+        appBar: AppBar(title: const Text('Message Cloud')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -488,7 +489,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'MSG to Server',
+          'Message Cloud',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -815,7 +816,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Spacer(),
                 Switch(
                   value: _serviceEnabled,
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                   onChanged: _toggleService,
                 ),
               ],

@@ -33,10 +33,12 @@ class OtpParserService {
       var serverUrl = (settings['server_url'] as String? ?? '').trim();
       if (serverUrl.isEmpty) return null;
 
-      if (serverUrl.startsWith('ws://'))
+      if (serverUrl.startsWith('ws://')) {
         serverUrl = serverUrl.replaceFirst('ws://', 'http://');
-      if (serverUrl.startsWith('wss://'))
+      }
+      if (serverUrl.startsWith('wss://')) {
         serverUrl = serverUrl.replaceFirst('wss://', 'https://');
+      }
       if (!serverUrl.startsWith('http://') &&
           !serverUrl.startsWith('https://')) {
         serverUrl = 'http://$serverUrl';

@@ -46,7 +46,8 @@ class SimDao {
     );
 
     if (existing.isNotEmpty) {
-      // Preserve existing custom_name / user_phone_number if incoming is blank
+      // Preserve existing custom_name / user_phone_number if incoming is blank,
+      // and preserve user-configured numberSource and enabled states across native scans.
       final existingModel = SimInfoModel.fromMap(existing.first);
       final merged = sim.copyWith(
         customName: sim.customName.isNotEmpty
@@ -55,7 +56,8 @@ class SimDao {
         userPhoneNumber: sim.userPhoneNumber.isNotEmpty
             ? sim.userPhoneNumber
             : existingModel.userPhoneNumber,
-        numberSource: sim.numberSource,
+        numberSource: existingModel.numberSource,
+        enabled: existingModel.enabled,
       );
       await db.update(
         'sim_config',

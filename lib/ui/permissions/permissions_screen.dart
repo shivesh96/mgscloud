@@ -17,6 +17,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   bool _notificationPostGranted = false;
   bool _notificationListenerGranted = false;
   bool _batteryOptimizationIgnored = false;
+  String _manufacturer = '';
   bool _isLoading = true;
 
   @override
@@ -33,6 +34,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final notifPost = await Permission.notification.isGranted;
     final notifListener = await _nativeService.isNotificationListenerPermissionGranted();
     final battery = await _nativeService.isBatteryOptimizationIgnored();
+    final manufacturer = await _nativeService.getDeviceManufacturer();
 
     setState(() {
       _smsGranted = sms;
@@ -40,6 +42,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       _notificationPostGranted = notifPost;
       _notificationListenerGranted = notifListener;
       _batteryOptimizationIgnored = battery;
+      _manufacturer = manufacturer;
       _isLoading = false;
     });
   }
@@ -115,9 +118,54 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     _checkPermissions();
                   },
                 ),
+                if (_isAggressiveOem)
+                  _buildPermissionTile(
+                    icon: Icons.power_settings_new_outlined,
+                    title: _oemTitle,
+                    description:
+                        'Crucial: ${_manufacturer.toUpperCase()} power management aggressively kills background services when the screen locks. Enable AutoStart and set Background activity to unrestricted.',
+                    isGranted: false,
+                    actionLabel: 'Open AutoStart Settings',
+                    onAction: () async {
+                      await _nativeService.openAutoStartSettings();
+                    },
+                  ),
               ],
             ),
     );
+  }
+
+  bool get _isAggressiveOem {
+    final m = _manufacturer.toLowerCase();
+    return m.contains('xiaomi') ||
+        m.contains('redmi') ||
+        m.contains('poco') ||
+        m.contains('samsung') ||
+        m.contains('huawei') ||
+        m.contains('honor') ||
+        m.contains('oppo') ||
+        m.contains('realme') ||
+        m.contains('vivo') ||
+        m.contains('iqoo') ||
+        m.contains('oneplus');
+  }
+
+  String get _oemTitle {
+    final m = _manufacturer.toLowerCase();
+    if (m.contains('xiaomi') || m.contains('redmi') || m.contains('poco')) {
+      return 'Xiaomi / MIUI AutoStart';
+    } else if (m.contains('samsung')) {
+      return 'Samsung Device Care & Battery';
+    } else if (m.contains('huawei') || m.contains('honor')) {
+      return 'Huawei App Launch / Startup';
+    } else if (m.contains('oppo') || m.contains('realme')) {
+      return 'Oppo / Realme Auto-Launch';
+    } else if (m.contains('vivo') || m.contains('iqoo')) {
+      return 'Vivo / iQOO Background Power';
+    } else if (m.contains('oneplus')) {
+      return 'OnePlus App Auto-Launch';
+    }
+    return 'OEM Background Management';
   }
 
   Widget _buildInfoBanner() {
@@ -134,7 +182,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'MSG to Server operates transparently. Permissions are required to forward events per your configuration.',
+              'Message Cloud operates transparently. Permissions are required to forward events per your configuration.',
               style: TextStyle(fontSize: 13, color: Colors.blue.shade900),
             ),
           ),

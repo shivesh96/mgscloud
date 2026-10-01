@@ -30,7 +30,7 @@ class BackgroundServiceManager {
           autoStart: true,
           isForegroundMode: true,
           notificationChannelId: 'msg_to_server_channel',
-          initialNotificationTitle: 'MSG to Server',
+          initialNotificationTitle: 'Message Cloud',
           initialNotificationContent:
               'Monitoring SMS, WhatsApp & Emails in background',
           foregroundServiceNotificationId: 888,
@@ -55,8 +55,12 @@ class BackgroundServiceManager {
 
   Future<void> startService() async {
     try {
-      if (!await AuthService.instance.isAuthenticated() ||
-          !await SettingsDao().isServiceEnabled()) {
+      final settings = await SettingsDao().getSettings();
+      final isEnabled = (settings['service_enabled'] as int? ?? 1) == 1;
+      final serverUrl = settings['server_url'] as String? ?? '';
+      final isAuth = await AuthService.instance.isAuthenticated();
+
+      if (!isEnabled || (!isAuth && serverUrl.trim().isEmpty)) {
         await stopService();
         return;
       }
@@ -88,10 +92,13 @@ void onBackgroundServiceStart(ServiceInstance service) async {
     service.stopSelf();
   });
 
-  // Do not keep a foreground worker alive for an unauthenticated account.
   try {
-    if (!await AuthService.instance.isAuthenticated() ||
-        !await SettingsDao().isServiceEnabled()) {
+    final settings = await SettingsDao().getSettings();
+    final isEnabled = (settings['service_enabled'] as int? ?? 1) == 1;
+    final serverUrl = settings['server_url'] as String? ?? '';
+    final isAuth = await AuthService.instance.isAuthenticated();
+
+    if (!isEnabled || (!isAuth && serverUrl.trim().isEmpty)) {
       service.stopSelf();
       return;
     }

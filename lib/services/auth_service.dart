@@ -443,9 +443,9 @@ class AuthService {
         await _dio.delete(
           deleteUrl,
           data: {
-            if (ids != null) 'ids': ids,
-            if (type != null) 'type': type,
-            if (all != null) 'all': all,
+            'ids': ?ids,
+            'type': ?type,
+            'all': ?all,
           },
           options: Options(
             headers: {'Authorization': 'Bearer ${user.authToken}'},

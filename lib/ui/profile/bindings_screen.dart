@@ -52,7 +52,7 @@ class _BindingsScreenState extends State<BindingsScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: type,
+                initialValue: type,
                 decoration: const InputDecoration(labelText: 'Binding Type', border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'mobile', child: Text('Mobile Number')),
@@ -78,8 +78,12 @@ class _BindingsScreenState extends State<BindingsScreen> {
                 final val = valueController.text.trim();
                 if (val.isNotEmpty) {
                   await _authService.addBinding(type: type, value: val);
-                  Navigator.pop(ctx);
-                  _loadData();
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                  }
+                  if (mounted) {
+                    _loadData();
+                  }
                 }
               },
               child: const Text('Add Binding'),
@@ -173,7 +177,7 @@ class _BindingsScreenState extends State<BindingsScreen> {
                   Text(
                     user.isGuest
                         ? 'Guest User (user_id: null)'
-                        : 'User ID: ${user.effectiveUserId} ${user.email.isNotEmpty ? '| ' + user.email : ''}',
+                        : 'User ID: ${user.effectiveUserId} ${user.email.isNotEmpty ? '| ${user.email}' : ''}',
                     style: TextStyle(fontSize: 13, color: Colors.blue.shade900),
                   ),
                 ],

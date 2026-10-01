@@ -30,7 +30,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
   String _protocol = 'HTTP';
   String _method = 'POST';
   String _authType = 'NONE';
-  String _forwardingMode = 'filtered';
+  String _forwardingMode = 'all';
 
   UserModel? _currentUser;
   StreamSubscription<UserModel>? _permSub;
@@ -324,7 +324,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _protocol,
+                        initialValue: _protocol,
                         decoration: const InputDecoration(
                           labelText: 'Communication Protocol',
                           prefixIcon: Icon(Icons.swap_calls),
@@ -345,7 +345,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                       if (_protocol == 'HTTP') ...[
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _method,
+                          initialValue: _method,
                           decoration: const InputDecoration(
                             labelText: 'HTTP Method',
                             prefixIcon: Icon(Icons.http),
@@ -387,7 +387,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _authType,
+                        initialValue: _authType,
                         decoration: const InputDecoration(
                           labelText: 'Auth Mechanism',
                           prefixIcon: Icon(Icons.key_outlined),

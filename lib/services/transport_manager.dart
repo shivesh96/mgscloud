@@ -34,12 +34,15 @@ class TransportManager {
     try {
       if (protocol == 'WebSocket') {
         var wsUrl = serverUrl.trim();
-        if (wsUrl.startsWith('http://'))
+        if (wsUrl.startsWith('http://')) {
           wsUrl = wsUrl.replaceFirst('http://', 'ws://');
-        if (wsUrl.startsWith('https://'))
+        }
+        if (wsUrl.startsWith('https://')) {
           wsUrl = wsUrl.replaceFirst('https://', 'wss://');
-        if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://'))
+        }
+        if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
           wsUrl = 'ws://$wsUrl';
+        }
 
         io.WebSocket? tempWs;
         try {
@@ -64,10 +67,12 @@ class TransportManager {
       } else {
         // HTTP Test - Hits health check or ping endpoint
         var targetUrl = serverUrl.trim();
-        if (targetUrl.startsWith('ws://'))
+        if (targetUrl.startsWith('ws://')) {
           targetUrl = targetUrl.replaceFirst('ws://', 'http://');
-        if (targetUrl.startsWith('wss://'))
+        }
+        if (targetUrl.startsWith('wss://')) {
           targetUrl = targetUrl.replaceFirst('wss://', 'https://');
+        }
         if (!targetUrl.startsWith('http://') &&
             !targetUrl.startsWith('https://')) {
           targetUrl = 'http://$targetUrl';
@@ -126,16 +131,6 @@ class TransportManager {
   }
 
   Future<bool> sendEvent(EventModel event) async {
-    if (!await AuthService.instance.isAuthenticated()) {
-      if (event.id != null) {
-        await _eventDao.updateEventStatus(
-          event.id!,
-          'pending',
-          response: 'Waiting for login',
-        );
-      }
-      return false;
-    }
     final settings = await _settingsDao.getSettings();
     final serverUrl = settings['server_url'] as String? ?? '';
     final protocol = settings['protocol'] as String? ?? 'WebSocket';
@@ -144,7 +139,9 @@ class TransportManager {
     final authToken = settings['auth_token'] as String? ?? '';
     final timeoutSec = settings['connection_timeout'] as int? ?? 30;
 
-    if (serverUrl.isEmpty) {
+    final isAuth = await AuthService.instance.isAuthenticated();
+
+    if (serverUrl.trim().isEmpty && !isAuth) {
       if (event.id != null) {
         await _eventDao.updateEventStatus(
           event.id!,
@@ -205,10 +202,12 @@ class TransportManager {
     required EventModel event,
   }) async {
     var httpUrl = serverUrl;
-    if (httpUrl.startsWith('ws://'))
+    if (httpUrl.startsWith('ws://')) {
       httpUrl = httpUrl.replaceFirst('ws://', 'http://');
-    if (httpUrl.startsWith('wss://'))
+    }
+    if (httpUrl.startsWith('wss://')) {
       httpUrl = httpUrl.replaceFirst('wss://', 'https://');
+    }
     if (!httpUrl.endsWith('/api/v1/events') && !httpUrl.contains('/events')) {
       final base = httpUrl.endsWith('/')
           ? httpUrl.substring(0, httpUrl.length - 1)

@@ -30,8 +30,10 @@ class SimInfoModel {
   }
 
   String get effectiveNumber {
-    if (numberSource == 'auto_detect' && detectedNumber.trim().isNotEmpty) {
-      return detectedNumber.trim();
+    if (numberSource == 'auto_detect') {
+      if (detectedNumber.trim().isNotEmpty) return detectedNumber.trim();
+      if (userPhoneNumber.trim().isNotEmpty) return userPhoneNumber.trim();
+      return 'Not configured';
     }
     if (userPhoneNumber.trim().isNotEmpty) return userPhoneNumber.trim();
     if (detectedNumber.trim().isNotEmpty) return detectedNumber.trim();

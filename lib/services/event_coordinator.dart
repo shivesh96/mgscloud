@@ -10,10 +10,12 @@ import '../data/local/dao/settings_dao.dart';
 import '../data/local/dao/sim_dao.dart';
 import '../data/local/dao/whatsapp_dao.dart';
 import '../domain/models/event_model.dart';
+import '../domain/models/sim_info_model.dart';
 import 'auth_service.dart';
 import 'native_service.dart';
 import 'otp_parser_service.dart';
 import 'persistent_websocket_manager.dart';
+import 'sim_service.dart';
 import 'transport_manager.dart';
 
 class EventCoordinator {
@@ -205,35 +207,80 @@ class EventCoordinator {
       String? simNumber;
       String? instanceName;
       String? userPhoneNumber;
+      int? resolvedSlot = simSlot;
 
       // 1. Resolve SIM information for SMS events
       if (effectiveSource == 'sms') {
-        int resolvedSlot = simSlot ?? 0;
-        if (subId != null && subId > 0) {
-          final sim = await _simDao.getSimBySubId(subId);
-          if (sim != null) {
-            if (!sim.enabled && !isTest) return null; // Ignored if SIM disabled
-            simName = sim.effectiveName;
-            simNumber = sim.effectiveNumber;
-          }
+        resolvedSlot = simSlot ?? 0;
+        var allSims = await _simDao.getAllSims();
+        if (allSims.isEmpty) {
+          try {
+            allSims = await SimService().detectAndSyncSims();
+          } catch (_) {}
         }
 
-        if (simName == null) {
-          final sim = await _simDao.getSimBySlot(resolvedSlot);
-          if (sim != null) {
-            if (!sim.enabled && !isTest) return null;
-            simName = sim.effectiveName;
-            simNumber = sim.effectiveNumber;
-          } else {
-            // Fallback to first configured SIM
-            final allSims = await _simDao.getAllSims();
-            if (allSims.isNotEmpty) {
-              simName = allSims.first.effectiveName;
-              simNumber = allSims.first.effectiveNumber;
-            } else {
-              simName = 'SIM ${resolvedSlot + 1}';
-            }
+        SimInfoModel? matchedSim;
+
+        if (allSims.length == 1) {
+          // SINGLE SIM PHONE:
+          // There is only ONE SIM card installed. Every incoming SMS physically
+          // arrived on this SIM card, regardless of whether the OS broadcast
+          // reported subId as 1, the carrier subscription ID (e.g. 4), or slot as 0 or 1.
+          matchedSim = allSims.first;
+        } else if (allSims.isNotEmpty) {
+          // MULTI-SIM PHONE:
+          // 1. Exact match by native subscriptionId
+          if (subId != null && subId > 0) {
+            matchedSim = allSims.cast<SimInfoModel?>().firstWhere(
+              (s) => s?.subscriptionId == subId,
+              orElse: () => null,
+            );
           }
+
+          // 2. Direct match by 0-based slotIndex
+          if (matchedSim == null && simSlot != null && simSlot >= 0) {
+            matchedSim = allSims.cast<SimInfoModel?>().firstWhere(
+              (s) => s?.slotIndex == simSlot,
+              orElse: () => null,
+            );
+          }
+
+          // 3. Many OEM intents use 1-based subId (subId 1 -> slot 0, subId 2 -> slot 1)
+          if (matchedSim == null && subId != null && subId > 0) {
+            final zeroBasedSlot = subId - 1;
+            matchedSim = allSims.cast<SimInfoModel?>().firstWhere(
+              (s) => s?.slotIndex == zeroBasedSlot,
+              orElse: () => null,
+            );
+          }
+
+          // 4. Many OEM intents use 1-based slotIndex (slot 1 -> slot 0)
+          if (matchedSim == null && simSlot != null && simSlot > 0) {
+            final zeroBasedSlot = simSlot - 1;
+            matchedSim = allSims.cast<SimInfoModel?>().firstWhere(
+              (s) => s?.slotIndex == zeroBasedSlot,
+              orElse: () => null,
+            );
+          }
+
+          // 5. Fallback to first enabled SIM or first available SIM
+          matchedSim ??= allSims.firstWhere((s) => s.enabled, orElse: () => allSims.first);
+        }
+
+        if (matchedSim != null) {
+          simName = matchedSim.effectiveName;
+          simNumber = (matchedSim.effectiveNumber.isNotEmpty &&
+                  matchedSim.effectiveNumber != 'Not configured')
+              ? matchedSim.effectiveNumber
+              : (matchedSim.userPhoneNumber.isNotEmpty
+                  ? matchedSim.userPhoneNumber
+                  : (matchedSim.detectedNumber.isNotEmpty
+                      ? matchedSim.detectedNumber
+                      : null));
+          resolvedSlot = matchedSim.slotIndex;
+        } else {
+          resolvedSlot = simSlot ?? 0;
+          simName = 'SIM ${resolvedSlot + 1}';
         }
       }
 
@@ -242,8 +289,9 @@ class EventCoordinator {
         if (packageName != null) {
           final waConfig = await _whatsAppDao.findConfigByPackage(packageName);
           if (waConfig != null) {
-            if (!waConfig.enabled && !isTest)
+            if (!waConfig.enabled && !isTest) {
               return null; // Ignored if instance disabled
+            }
             instanceName = waConfig.instanceName.isNotEmpty
                 ? waConfig.instanceName
                 : 'WhatsApp';
@@ -280,17 +328,34 @@ class EventCoordinator {
         type: effectiveSource,
       );
 
-      // 4. Match receiving number / sender to bound user
-      final targetContact = (simNumber != null && simNumber.isNotEmpty)
-          ? simNumber
-          : (userPhoneNumber != null && userPhoneNumber.isNotEmpty)
-          ? userPhoneNumber
-          : (RegExp(r'^\+?[0-9\s\-()]{7,}$').hasMatch(effectiveSender)
-                ? effectiveSender
-                : null);
+      // 4. Match receiving number to bound user
+      String? receivingNumber;
+      if (simNumber != null &&
+          simNumber.isNotEmpty &&
+          simNumber != 'Not configured') {
+        receivingNumber = simNumber;
+      } else if (userPhoneNumber != null &&
+          userPhoneNumber.isNotEmpty &&
+          userPhoneNumber != 'Not configured') {
+        receivingNumber = userPhoneNumber;
+      } else {
+        final allSims = await _simDao.getAllSims();
+        final firstSimNum =
+            allSims.isNotEmpty ? allSims.first.effectiveNumber : null;
+        if (firstSimNum != null &&
+            firstSimNum.isNotEmpty &&
+            firstSimNum != 'Not configured') {
+          receivingNumber = firstSimNum;
+        } else {
+          final currentUser = await _authService.getCurrentUser();
+          if (currentUser.mobile.isNotEmpty) {
+            receivingNumber = currentUser.mobile;
+          }
+        }
+      }
 
-      final boundUserId = targetContact != null
-          ? await _authService.findBoundUserIdFor(targetContact)
+      final boundUserId = receivingNumber != null
+          ? await _authService.findBoundUserIdFor(receivingNumber)
           : null;
 
       final ts =
@@ -311,7 +376,7 @@ class EventCoordinator {
         eventType: eventType,
         source: effectiveSource,
         timestamp: isoDate,
-        simSlot: simSlot ?? (effectiveSource == 'sms' ? 0 : null),
+        simSlot: effectiveSource == 'sms' ? resolvedSlot : simSlot,
         simName: simName,
         simNumber: simNumber,
         sender: effectiveSender,
@@ -324,7 +389,7 @@ class EventCoordinator {
         serviceCenter: rawServiceCenter,
         otp: extractedOtp,
         userId: boundUserId,
-        targetMobile: targetContact,
+        targetMobile: receivingNumber,
         deliveryStatus: deliveryStatus,
         contentHidden: contentHidden,
         createdAt: DateTime.now().millisecondsSinceEpoch,

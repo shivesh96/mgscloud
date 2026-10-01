@@ -62,7 +62,7 @@ object EventBridge {
                 .putString(KEY_FLUTTER_PREFIX, updatedJson)
                 .putString(KEY_PENDING, updatedJson)
                 .putString(KEY_RAW, updatedJson)
-                .apply()
+                .commit()
         } catch (_: Exception) {
         }
     }

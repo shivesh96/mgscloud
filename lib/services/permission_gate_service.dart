@@ -21,8 +21,9 @@ class PermissionGateService {
   Future<bool> requestMandatoryPermissions() async {
     if (!await Permission.sms.isGranted) await Permission.sms.request();
     if (!await Permission.phone.isGranted) await Permission.phone.request();
-    if (!await Permission.notification.isGranted)
+    if (!await Permission.notification.isGranted) {
       await Permission.notification.request();
+    }
     if (!await NativeService.instance.isBatteryOptimizationIgnored()) {
       await NativeService.instance.requestIgnoreBatteryOptimizations();
     }

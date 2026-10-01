@@ -163,8 +163,10 @@ class _WhatsAppConfigScreenState extends State<WhatsAppConfigScreen> with Widget
                   instanceName: nameCtrl.text.trim(),
                   phoneNumber: numCtrl.text.trim(),
                 );
-                if (mounted) {
+                if (ctx.mounted) {
                   Navigator.pop(ctx);
+                }
+                if (mounted) {
                   _loadInstances();
                 }
               }
@@ -398,7 +400,7 @@ class _WhatsAppConfigScreenState extends State<WhatsAppConfigScreen> with Widget
                 ),
                 Switch(
                   value: isEnabled,
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                   onChanged: (val) {
                     setState(() {
                       _enabledStates[id] = val;

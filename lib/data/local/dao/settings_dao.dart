@@ -23,6 +23,7 @@ class SettingsDao {
       'retry_interval': 15,
       'retention_days': 30,
       'service_enabled': 1,
+      'send_filtered_only': 0,
     };
   }
 

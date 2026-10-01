@@ -41,7 +41,7 @@
     </queries>
 
     <application
-        android:label="MSG to Server"
+        android:label="Message Cloud"
         android:name=".MsgToServerApplication"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -49,6 +49,8 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -76,7 +78,7 @@
         <!-- Notification Listener Service -->
         <service
             android:name=".MsgNotificationListenerService"
-            android:label="MSG to Server Notification Listener"
+            android:label="Message Cloud Notification Listener"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>

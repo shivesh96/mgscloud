@@ -1,16 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'data/local/database/app_database.dart';
 import 'services/background_service_manager.dart';
 import 'services/event_coordinator.dart';
+import 'services/sim_service.dart';
 import 'ui/home/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Enforce portrait mode strictly
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   // Initialize SQLite database
   try {
     await AppDatabase.instance.database;
+  } catch (_) {}
+
+  // Auto-detect and sync SIM cards on launch
+  try {
+    await SimService().detectAndSyncSims();
   } catch (_) {}
 
   // Initialize native event capture & coordination
@@ -32,7 +45,7 @@ class MsgToServerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MSG to Server',
+      title: 'Message Cloud',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

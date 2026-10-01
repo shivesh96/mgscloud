@@ -19,7 +19,9 @@ import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.annotation.Keep
 
+@Keep
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.cybolite.msgserver/channel"
     private var methodChannel: MethodChannel? = null
@@ -61,7 +63,7 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "msg_to_server_channel",
-                "MSG to Server Background Service",
+                "Message Cloud Background Service",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Keeps message monitoring active in background"
@@ -111,6 +113,13 @@ class MainActivity : FlutterActivity() {
                 }
                 "requestIgnoreBatteryOptimizations" -> {
                     requestIgnoreBatteryOptimizations()
+                    result.success(true)
+                }
+                "getDeviceManufacturer" -> {
+                    result.success(Build.MANUFACTURER?.lowercase() ?: "generic")
+                }
+                "openAutoStartSettings" -> {
+                    openAutoStartSettings()
                     result.success(true)
                 }
                 "pollPendingEvents" -> {
@@ -281,6 +290,56 @@ class MainActivity : FlutterActivity() {
                 }
                 startActivity(intent)
             } catch (_: Exception) {}
+        }
+    }
+
+    private fun openAutoStartSettings() {
+        val manufacturer = Build.MANUFACTURER?.lowercase() ?: ""
+        val intents = mutableListOf<Intent>()
+
+        when {
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+                intents.add(Intent().setComponent(android.content.ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")))
+                intents.add(Intent("miui.intent.action.OP_AUTO_START").addCategory(Intent.CATEGORY_DEFAULT))
+            }
+            manufacturer.contains("samsung") -> {
+                intents.add(Intent().setComponent(android.content.ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")))
+                intents.add(Intent().setComponent(android.content.ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.battery.BatteryActivity")))
+                intents.add(Intent().setComponent(android.content.ComponentName("com.samsung.android.sm_cn", "com.samsung.android.sm.ui.battery.BatteryActivity")))
+            }
+            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
+                intents.add(Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")))
+                intents.add(Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")))
+                intents.add(Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity")))
+            }
+            manufacturer.contains("oppo") || manufacturer.contains("realme") -> {
+                intents.add(Intent().setComponent(android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")))
+                intents.add(Intent().setComponent(android.content.ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity")))
+                intents.add(Intent().setComponent(android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")))
+            }
+            manufacturer.contains("vivo") || manufacturer.contains("iqoo") -> {
+                intents.add(Intent().setComponent(android.content.ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")))
+                intents.add(Intent().setComponent(android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")))
+            }
+            manufacturer.contains("oneplus") -> {
+                intents.add(Intent().setComponent(android.content.ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity")))
+            }
+        }
+
+        // Generic fallback to Application Details Settings
+        val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        intents.add(appDetailsIntent)
+
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                return
+            } catch (_: Exception) {
+                // Try next intent
+            }
         }
     }
 }

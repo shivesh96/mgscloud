@@ -175,7 +175,7 @@ class _OtpRulesScreenState extends State<OtpRulesScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: ['sms', 'whatsapp', 'email', 'all'].contains(typeCtrl.text.toLowerCase()) ? typeCtrl.text.toLowerCase() : 'sms',
+                initialValue: ['sms', 'whatsapp', 'email', 'all'].contains(typeCtrl.text.toLowerCase()) ? typeCtrl.text.toLowerCase() : 'sms',
                 decoration: const InputDecoration(labelText: 'Type / Channel', border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'sms', child: Text('SMS')),

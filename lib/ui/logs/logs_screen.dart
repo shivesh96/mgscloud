@@ -436,7 +436,7 @@ class _LogsScreenState extends State<LogsScreen> {
 
     final tile = ListTile(
       selected: isSelected,
-      selectedTileColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+      selectedTileColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
       onLongPress: () {
         if (!_selectionMode && event.id != null) {
           setState(() {
@@ -478,7 +478,7 @@ class _LogsScreenState extends State<LogsScreen> {
               },
             )
           : CircleAvatar(
-              backgroundColor: badgeColor.withOpacity(0.15),
+              backgroundColor: badgeColor.withValues(alpha: 0.15),
               child: Icon(icon, color: badgeColor),
             ),
       title: Row(
@@ -494,7 +494,7 @@ class _LogsScreenState extends State<LogsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.15),
+              color: statusColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(

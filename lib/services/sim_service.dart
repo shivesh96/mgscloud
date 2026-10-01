@@ -30,6 +30,7 @@ class SimService {
         carrierName: carrier,
         defaultName: displayName,
         detectedNumber: detectedNumber,
+        numberSource: nativeList.length <= 1 ? 'auto_detect' : 'default',
         updatedAt: now,
       );
 

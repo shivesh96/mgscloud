@@ -54,7 +54,10 @@ class EventModel {
   });
 
   Map<String, dynamic> toServerPayload() {
-    final effectiveMobile = targetMobile ?? userPhoneNumber ?? simNumber ?? '';
+    final cleanTarget = _cleanContact(targetMobile);
+    final cleanUserPhone = _cleanContact(userPhoneNumber);
+    final cleanSimNum = _cleanContact(simNumber);
+    final effectiveMobile = cleanSimNum ?? cleanTarget ?? cleanUserPhone;
     final effectiveSender = (sender != null && sender!.isNotEmpty && sender != 'Unknown')
         ? sender!
         : (title != null && title!.isNotEmpty ? title! : 'Unknown');
@@ -63,7 +66,7 @@ class EventModel {
       'event_id': eventId,
       'device_id': deviceId,
       'user_id': userId,
-      'mobile': effectiveMobile.isNotEmpty ? effectiveMobile : null,
+      'mobile': effectiveMobile,
       'type': source,
       'source': source,
       'event_type': eventType,
@@ -77,19 +80,28 @@ class EventModel {
       'timestamp': timestamp,
       'sim_slot': simSlot,
       'sim_name': simName,
-      'sim_number': simNumber,
+      'sim_number': cleanSimNum,
       'instance_name': instanceName,
-      'user_phone_number': userPhoneNumber,
+      'user_phone_number': cleanUserPhone,
       'user_profile_id': userProfileId,
       'package_name': packageName,
-      if (simSlot != null || simName != null || simNumber != null)
+      if (simSlot != null || simName != null || cleanSimNum != null)
         'sim': {
-          if (simSlot != null) 'slot': simSlot,
-          if (simName != null) 'name': simName,
-          if (simNumber != null && simNumber!.isNotEmpty) 'number': simNumber,
+          'slot': ?simSlot,
+          'name': ?simName,
+          'number': ?cleanSimNum,
         },
-      if (contentHidden != null) 'content_hidden': contentHidden,
+      'content_hidden': ?contentHidden,
     };
+  }
+
+  static String? _cleanContact(String? val) {
+    if (val == null) return null;
+    final trimmed = val.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'not configured') {
+      return null;
+    }
+    return trimmed;
   }
 
   Map<String, dynamic> toMap() {
